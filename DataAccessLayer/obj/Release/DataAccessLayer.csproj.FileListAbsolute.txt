@@ -1,0 +1,6 @@
+C:\Users\scorp\source\repos\DataAccessLayer\bin\Release\DataAccessLayer.dll
+C:\Users\scorp\source\repos\DataAccessLayer\bin\Release\DataAccessLayer.pdb
+C:\Users\scorp\source\repos\DataAccessLayer\obj\Release\DataAccessLayer.csproj.AssemblyReference.cache
+C:\Users\scorp\source\repos\DataAccessLayer\obj\Release\DataAccessLayer.csproj.CoreCompileInputs.cache
+C:\Users\scorp\source\repos\DataAccessLayer\obj\Release\DataAccessLayer.dll
+C:\Users\scorp\source\repos\DataAccessLayer\obj\Release\DataAccessLayer.pdb

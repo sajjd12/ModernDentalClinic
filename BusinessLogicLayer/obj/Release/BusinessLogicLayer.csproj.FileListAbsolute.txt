@@ -1,0 +1,9 @@
+C:\Users\scorp\source\repos\BusinessLogicLayer\bin\Release\BusinessLogicLayer.dll
+C:\Users\scorp\source\repos\BusinessLogicLayer\bin\Release\BusinessLogicLayer.pdb
+C:\Users\scorp\source\repos\BusinessLogicLayer\bin\Release\DataAccessLayer.dll
+C:\Users\scorp\source\repos\BusinessLogicLayer\bin\Release\DataAccessLayer.pdb
+C:\Users\scorp\source\repos\BusinessLogicLayer\obj\Release\BusinessLogicLayer.csproj.AssemblyReference.cache
+C:\Users\scorp\source\repos\BusinessLogicLayer\obj\Release\BusinessLogicLayer.csproj.CoreCompileInputs.cache
+C:\Users\scorp\source\repos\BusinessLogicLayer\obj\Release\Business.450209FB.Up2Date
+C:\Users\scorp\source\repos\BusinessLogicLayer\obj\Release\BusinessLogicLayer.dll
+C:\Users\scorp\source\repos\BusinessLogicLayer\obj\Release\BusinessLogicLayer.pdb
