@@ -98,8 +98,12 @@ namespace BusinessLogicLayer
                 {
                     case enMode.AddNew:
                         {
-                            this.Mode = enMode.Update;
-                            return _addNewPatient();
+                            if (_addNewPatient())
+                            {
+                                this.Mode = enMode.Update;
+                                return true;
+                            }
+                            return false;
                         }
                     case enMode.Update:
                         {
@@ -139,24 +143,28 @@ namespace BusinessLogicLayer
             {
                 using (Aes aesAlg = Aes.Create())
                 {
-                    // Set the key and IV for AES encryption
-                    aesAlg.Key = Encoding.UTF8.GetBytes(key);
-                    aesAlg.IV = new byte[aesAlg.BlockSize / 8];
+                    // Ensure the key is the correct size by hashing it
+                    using (SHA256 sha256 = SHA256.Create())
+                    {
+                        aesAlg.Key = sha256.ComputeHash(Encoding.UTF8.GetBytes(key));
+                    }
 
+                    aesAlg.GenerateIV(); // Generate a random IV
 
                     // Create an encryptor
                     ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
 
-
                     // Encrypt the data
                     using (var msEncrypt = new System.IO.MemoryStream())
                     {
+                        // Write IV to the beginning of the stream
+                        msEncrypt.Write(aesAlg.IV, 0, aesAlg.IV.Length);
+
                         using (var csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
                         using (var swEncrypt = new System.IO.StreamWriter(csEncrypt))
                         {
                             swEncrypt.Write(plainText);
                         }
-
 
                         // Return the encrypted data as a Base64-encoded string
                         return Convert.ToBase64String(msEncrypt.ToArray());
@@ -168,17 +176,25 @@ namespace BusinessLogicLayer
             {
                 using (Aes aesAlg = Aes.Create())
                 {
-                    // Set the key and IV for AES decryption
-                    aesAlg.Key = Encoding.UTF8.GetBytes(key);
-                    aesAlg.IV = new byte[aesAlg.BlockSize / 8];
+                    // Ensure the key is the correct size by hashing it
+                    using (SHA256 sha256 = SHA256.Create())
+                    {
+                        aesAlg.Key = sha256.ComputeHash(Encoding.UTF8.GetBytes(key));
+                    }
 
+                    byte[] fullCipher = Convert.FromBase64String(cipherText);
+
+                    // Extract IV
+                    byte[] iv = new byte[aesAlg.BlockSize / 8];
+                    if (fullCipher.Length < iv.Length) throw new ArgumentException("Invalid cipher text");
+                    Array.Copy(fullCipher, 0, iv, 0, iv.Length);
+                    aesAlg.IV = iv;
 
                     // Create a decryptor
                     ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
 
-
                     // Decrypt the data
-                    using (var msDecrypt = new System.IO.MemoryStream(Convert.FromBase64String(cipherText)))
+                    using (var msDecrypt = new System.IO.MemoryStream(fullCipher, iv.Length, fullCipher.Length - iv.Length))
                     using (var csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
                     using (var srDecrypt = new System.IO.StreamReader(csDecrypt))
                     {

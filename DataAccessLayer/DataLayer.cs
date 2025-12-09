@@ -17,6 +17,14 @@ namespace DataAccessLayer
 
         private static SqlConnection GetConnection()
         {
+            // Try to get connection string from environment variable or config if available, otherwise fallback (for now keeping fallback)
+            // In a real scenario, we would use ConfigurationManager.ConnectionStrings["DentalClinicDB"].ConnectionString;
+            // But since we cannot verify App.config here, I will leave the fallback but adding a comment.
+            string envConn = Environment.GetEnvironmentVariable("DentalClinicDB_ConnectionString");
+            if (!string.IsNullOrEmpty(envConn))
+            {
+                return new SqlConnection(envConn);
+            }
             return new SqlConnection(ConnectionString);
         }
 
@@ -85,6 +93,15 @@ namespace DataAccessLayer
         public static DataTable Search(string column, string keyword)
         {
             DataTable dt = new DataTable();
+
+            // Validate column name to prevent SQL Injection
+            var allowedColumns = new List<string> { "PatientID", "FullName", "VisitDate", "Address", "Age", "Gender", "Phone", "MedicalHistory", "Notes", "CanalLength" };
+            if (!allowedColumns.Contains(column))
+            {
+                // Default to FullName if invalid column is provided
+                column = "FullName";
+            }
+
             string query = $"SELECT  Patients.PatientID AS التسلسل,Patients.FullName AS الاسم, Patients.VisitDate AS تاريخ_المراجعة, Patients.Address AS العنوان,Patients.Age AS العمر,CASE WHEN Patients.Gender = 0 THEN 'انثى' ELSE 'ذكر' END AS الجنس, Patients.Phone AS رقم_الهاتف FROM Patients WHERE {column} LIKE @keyword";
 
             using (SqlConnection con = GetConnection()) 
