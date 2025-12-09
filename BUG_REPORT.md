@@ -73,3 +73,39 @@ Exceptions are caught and logged to a text file, but the methods return `false` 
 
 **Recommendation:**
 Consider rethrowing the exception or returning a result object that contains error details.
+
+## 7. Security Vulnerability: Unsalted Password Hashing
+**Location:** `BusinessLogicLayer/BusinessLayer.cs`, Class: `clsHashing`
+
+**Description:**
+User passwords are hashed using simple SHA-256 without a salt. This allows attackers to use pre-computed rainbow tables to reverse the hashes and recover original passwords if the database is compromised.
+
+**Recommendation:**
+Implement a salted hashing algorithm (e.g., PBKDF2, Argon2, or bcrypt). At a minimum, generate a random salt for each user, combine it with the password before hashing, and store the salt alongside the hash.
+
+## 8. Potential Schema Mismatch / Missing Code
+**Location:** `DataAccessLayer/DataLayer.cs`, Method: `DeletePatient`
+
+**Description:**
+The `DeletePatient` method attempts to delete records from `Payments` and `Images` tables:
+```csharp
+DELETE FROM Payments WHERE PatientID = @PatientID;
+DELETE FROM Images WHERE PatientID = @PatientID;
+```
+However, there is no other reference to `Payments` or `Images` tables in the provided codebase. This suggests either missing code files (e.g., `clsPayments`, `clsImages`) or a mismatch between the code and the database schema.
+
+**Recommendation:**
+Verify if these tables exist and if there should be corresponding business logic classes to handle them.
+
+## 9. Hardcoded Business Logic (Magic Numbers)
+**Location:** `DataAccessLayer/DataLayer.cs`, Method: `GetLowStockItems`
+
+**Description:**
+The method uses a hardcoded value `3` to determine low stock:
+```csharp
+WHERE Quantity < MinQuantity OR Quantity < 3
+```
+This "magic number" makes the business rule rigid and hard to maintain or configure.
+
+**Recommendation:**
+Move this threshold to a configuration setting or a database parameter.

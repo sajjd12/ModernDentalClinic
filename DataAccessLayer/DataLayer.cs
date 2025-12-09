@@ -28,9 +28,9 @@ namespace DataAccessLayer
             return new SqlConnection(ConnectionString);
         }
 
-        private static SqlCommand CreateCommand(SqlConnection con, string query, Dictionary<string, object> parameters)
+        private static SqlCommand CreateCommand(SqlConnection con, string query, Dictionary<string, object> parameters, SqlTransaction tran = null)
         {
-            SqlCommand cmd = new SqlCommand(query, con);
+            SqlCommand cmd = new SqlCommand(query, con, tran);
             if (parameters != null)
             {
                 foreach (var p in parameters)
@@ -96,7 +96,14 @@ namespace DataAccessLayer
 
             // Validate column name to prevent SQL Injection
             var allowedColumns = new List<string> { "PatientID", "FullName", "VisitDate", "Address", "Age", "Gender", "Phone", "MedicalHistory", "Notes", "CanalLength" };
-            if (!allowedColumns.Contains(column))
+            // Check for match ignoring case
+            var match = allowedColumns.FirstOrDefault(c => c.Equals(column, StringComparison.OrdinalIgnoreCase));
+
+            if (match != null)
+            {
+                column = match;
+            }
+            else
             {
                 // Default to FullName if invalid column is provided
                 column = "FullName";
@@ -448,27 +455,28 @@ namespace DataAccessLayer
 
                 using (SqlConnection con = GetConnection())
                 {
+                    SqlTransaction tran = null;
                     try
                     {
                         con.Open();
+                        // Use a transaction with Serializable isolation to prevent race conditions
+                        tran = con.BeginTransaction(IsolationLevel.Serializable);
 
                         int? id = null;
-                        int currentQty = 0;
 
-                        // البحث الدقيق بغض النظر عن المسافات أو حالة الأحرف
-                        using (SqlCommand cmdGet = CreateCommand(con, qGet, new Dictionary<string, object> { ["@Name"] = name }))
+                        // Search for item
+                        using (SqlCommand cmdGet = CreateCommand(con, qGet, new Dictionary<string, object> { ["@Name"] = name }, tran))
                         using (SqlDataReader r = cmdGet.ExecuteReader())
                         {
                             if (r.Read())
                             {
                                 id = Convert.ToInt32(r["ItemID"]);
-                                currentQty = Convert.ToInt32(r["Quantity"]);
                             }
                         }
 
                         if (id.HasValue)
                         {
-                            // تحديث المادة الموجودة
+                            // Update existing item
                             using (SqlCommand cmdUpd = CreateCommand(con, qUpdate, new Dictionary<string, object>
                             {
                                 ["@ID"] = id.Value,
@@ -476,14 +484,21 @@ namespace DataAccessLayer
                                 ["@Min"] = minQuantity,
                                 ["@Exp"] = (object)expiry ?? DBNull.Value,
                                 ["@Buy"] = (object)purchase ?? DBNull.Value
-                            }))
+                            }, tran))
                             {
-                                return cmdUpd.ExecuteNonQuery() > 0;
+                                int rows = cmdUpd.ExecuteNonQuery();
+                                if (rows > 0)
+                                {
+                                    tran.Commit();
+                                    return true;
+                                }
+                                tran.Rollback();
+                                return false;
                             }
                         }
                         else
                         {
-                            // إضافة مادة جديدة فقط إذا لم تكن موجودة فعلاً
+                            // Add new item
                             using (SqlCommand cmdIns = CreateCommand(con, qInsert, new Dictionary<string, object>
                             {
                                 ["@Name"] = name.Trim(),
@@ -491,14 +506,22 @@ namespace DataAccessLayer
                                 ["@Min"] = minQuantity,
                                 ["@Exp"] = (object)expiry ?? DBNull.Value,
                                 ["@Buy"] = (object)purchase ?? DBNull.Value
-                            }))
+                            }, tran))
                             {
-                                return cmdIns.ExecuteNonQuery() > 0;
+                                int rows = cmdIns.ExecuteNonQuery();
+                                if (rows > 0)
+                                {
+                                    tran.Commit();
+                                    return true;
+                                }
+                                tran.Rollback();
+                                return false;
                             }
                         }
                     }
                     catch (Exception ex)
                     {
+                        if (tran != null) try { tran.Rollback(); } catch { }
                         LogError("AddOrIncrementItem", ex);
                         return false;
                     }
